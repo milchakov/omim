@@ -418,6 +418,15 @@ bool Editor::IsCreatedFeature(FeatureID const & fid)
 {
   return fid.m_index >= kStartIndexForCreatedFeatures;
 }
+  
+  bool Editor::WasDefaultNameSaved(FeatureID const & fid) const
+  {
+    if(IsCreatedFeature(fid))
+      return false;
+    
+    auto feature = m_getOriginalFeatureFn(fid);
+    return feature->HasName();
+  }
 
 /// Several cases should be handled while saving changes:
 /// 1) a feature is not in editor's cache

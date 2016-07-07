@@ -2,6 +2,7 @@
 #include "indexer/cuisines.hpp"
 #include "indexer/editable_map_object.hpp"
 #include "indexer/postcodes_matcher.hpp"
+#include "indexer/osm_editor.hpp"
 
 #include "base/macros.hpp"
 #include "base/string_utils.hpp"
@@ -11,6 +12,7 @@
 
 namespace osm
 {
+  list <string> const kNativelanguagesForMwm = {"de", "fr"};
 // LocalizedName -----------------------------------------------------------------------------------
 
 LocalizedName::LocalizedName(int8_t const code, string const & name)
@@ -82,10 +84,45 @@ void EditableMapObject::SetName(StringUtf8Multilang const & name) { m_name = nam
 
 void EditableMapObject::SetName(string name, int8_t langCode)
 {
+  ASSERT(StringUtf8Multilang::kDefaultCode != langCode, ("Default name should be calculated"));
+  
   strings::Trim(name);
   if (!name.empty())
     m_name.AddString(langCode, name);
+  
+  if(Editor::Instance().WasDefaultNameSaved(GetID()))
+    return;
+  
+  auto defaultName = CalculateDefaultName(m_name, kNativelanguagesForMwm);
+  
+  if(!defaultName.empty())
+  {
+    m_name.AddString(StringUtf8Multilang::kDefaultCode, defaultName);
+  }
+  else
+  {
+    m_name.AddString(StringUtf8Multilang::kDefaultCode, name);
+  }
 }
+  
+  string EditableMapObject::CalculateDefaultName(StringUtf8Multilang const & name, list <string> const & nativeMwmLanguages)
+  {
+    string defaultName;
+    
+    for(auto const &language : nativeMwmLanguages)
+    {
+      if(name.GetString(language, defaultName))
+        return defaultName;
+    }
+    
+    if(name.GetString(StringUtf8Multilang::kInternationalCode, defaultName))
+      return defaultName;
+    
+    
+    
+    
+    return defaultName;
+  }
 
 void EditableMapObject::SetMercator(m2::PointD const & center) { m_mercator = center; }
 

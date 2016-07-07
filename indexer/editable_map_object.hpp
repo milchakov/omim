@@ -118,6 +118,8 @@ public:
   static bool ValidateEmail(string const & email);
 
 private:
+  string CalculateDefaultName(StringUtf8Multilang const & name, list <string> const & nativeMwmLanguages);
+  
   string m_houseNumber;
   LocalizedStreet m_street;
   vector<LocalizedStreet> m_nearbyStreets;
