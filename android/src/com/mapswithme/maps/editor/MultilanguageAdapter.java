@@ -1,17 +1,18 @@
 package com.mapswithme.maps.editor;
 
+import android.support.design.widget.TextInputLayout;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 
+import java.util.List;
+
 import com.mapswithme.maps.R;
 import com.mapswithme.maps.editor.data.LocalizedName;
 import com.mapswithme.util.StringUtils;
 import com.mapswithme.util.UiUtils;
-
-import java.util.List;
 
 public class MultilanguageAdapter extends RecyclerView.Adapter<MultilanguageAdapter.Holder>
 {
@@ -45,7 +46,7 @@ public class MultilanguageAdapter extends RecyclerView.Adapter<MultilanguageAdap
   {
     LocalizedName name = mNames.get(position);
     holder.input.setText(name.name);
-    holder.input.setHint(name.lang);
+    holder.inputLayout.setHint(name.lang);
   }
 
   @Override
@@ -95,11 +96,13 @@ public class MultilanguageAdapter extends RecyclerView.Adapter<MultilanguageAdap
   public class Holder extends RecyclerView.ViewHolder
   {
     EditText input;
+    TextInputLayout inputLayout;
 
     public Holder(View itemView)
     {
       super(itemView);
       input = (EditText) itemView.findViewById(R.id.input);
+      inputLayout = (TextInputLayout) input.getParent();
       input.addTextChangedListener(new StringUtils.SimpleTextWatcher()
       {
         @Override
