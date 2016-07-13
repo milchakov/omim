@@ -295,22 +295,17 @@ Java_com_mapswithme_maps_editor_Editor_nativeIsBuilding(JNIEnv * env, jclass cla
   return g_editableMapObject.IsBuilding();
 }
 
-JNIEXPORT jstring JNICALL
-Java_com_mapswithme_maps_editor_Editor_nativeGetDefaultName(JNIEnv * env, jclass)
+JNIEXPORT jobject JNICALL Java_com_mapswithme_maps_editor_Editor_nativeGetLocalizedNamesWithPriority(JNIEnv * env, jclass)
 {
-  return jni::ToJavaString(env, g_editableMapObject.GetDefaultName());
-}
+  auto const namesWithPriority = g_editableMapObject.GetLocalizedNamesWithPriority();
 
-JNIEXPORT void JNICALL
-Java_com_mapswithme_maps_editor_Editor_nativeSetDefaultName(JNIEnv * env, jclass, jstring name)
-{
-  g_editableMapObject.SetName(jni::ToNativeString(env, name), StringUtf8Multilang::kDefaultCode);
-}
+  jobjectArray names = jni::ToJavaArray(env, g_localNameClazz, namesWithPriority.first, ToJavaName);
+  jint mandatoryNamesCount = namesWithPriority.second;
 
-JNIEXPORT jobjectArray JNICALL
-Java_com_mapswithme_maps_editor_Editor_nativeGetLocalizedNames(JNIEnv * env, jclass)
-{
-  return jni::ToJavaArray(env, g_localNameClazz, g_editableMapObject.GetLocalizedNames(), ToJavaName);
+  static jclass const localizedNamesClassID = jni::GetGlobalClassRef(env, "com/mapswithme/maps/editor/data/LocalizedNamesWithPriorityPair");
+  static jmethodID const constructorID = jni::GetConstructorID(env, localizedNamesClassID, "([Lcom/mapswithme/maps/editor/data/LocalizedName;I)V");
+
+  return env->NewObject(localizedNamesClassID, constructorID, names, mandatoryNamesCount);
 }
 
 JNIEXPORT void JNICALL
