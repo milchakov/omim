@@ -15,14 +15,20 @@ import java.util.List;
 
 public class MultilanguageAdapter extends RecyclerView.Adapter<MultilanguageAdapter.Holder>
 {
-  private final List<LocalizedName> mNames;
   private EditorHostFragment mHostFragment;
+
+  private final List<LocalizedName> mNames;
+  private int mMandatoryNamesCount;
+  private boolean mAdditionalLanguagesShown;
 
   // TODO(mgsergio): Refactor: don't pass the whole EditorHostFragment.
   MultilanguageAdapter(EditorHostFragment hostFragment)
   {
     mHostFragment = hostFragment;
+
     mNames = hostFragment.getLocalizedNames();
+    mMandatoryNamesCount = hostFragment.getMandatoryNamesCount();
+    mAdditionalLanguagesShown = false;
   }
 
   @Override
@@ -45,7 +51,45 @@ public class MultilanguageAdapter extends RecyclerView.Adapter<MultilanguageAdap
   @Override
   public int getItemCount()
   {
+    if(mAdditionalLanguagesShown)
+      return mNames.size();
+
+    return mMandatoryNamesCount;
+  }
+
+  public int getNamesCount()
+  {
     return mNames.size();
+  }
+
+  public int getMandatoryNamesCount()
+  {
+    return mMandatoryNamesCount;
+  }
+
+  public boolean isAdditionalLanguagesShown()
+  {
+    return mAdditionalLanguagesShown;
+  }
+
+  public void setAdditionalLanguagesShown(boolean isAdditionalLanguagesShown)
+  {
+    if(mAdditionalLanguagesShown == isAdditionalLanguagesShown)
+      return;
+
+    mAdditionalLanguagesShown = isAdditionalLanguagesShown;
+
+    if(mNames.size() !=  mMandatoryNamesCount)
+    {
+      if(isAdditionalLanguagesShown)
+      {
+        notifyItemRangeInserted(mMandatoryNamesCount , mNames.size() - mMandatoryNamesCount);
+      }
+      else
+      {
+        notifyItemRangeRemoved(mMandatoryNamesCount, mNames.size() - mMandatoryNamesCount);
+      }
+    }
   }
 
   public class Holder extends RecyclerView.ViewHolder

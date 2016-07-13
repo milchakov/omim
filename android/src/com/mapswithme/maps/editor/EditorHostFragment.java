@@ -25,6 +25,7 @@ import com.mapswithme.util.ConnectionState;
 import com.mapswithme.util.UiUtils;
 import com.mapswithme.util.Utils;
 import com.mapswithme.util.statistics.Statistics;
+import com.mapswithme.maps.editor.data.LocalizedNamesWithPriorityPair;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +50,10 @@ public class EditorHostFragment extends BaseMwmToolbarFragment
    * A list of localized names added by a user and those that were in metadata.
    */
   private static final List<LocalizedName> sLocalizedNames = new ArrayList<>();
+  /**
+   * Count of mandatory names which should be always shown
+   */
+  private int mMandatoryNamesCount = 0;
 
   /**
    *   Used in MultilanguageAdapter to show, select and remove items.
@@ -87,6 +92,14 @@ public class EditorHostFragment extends BaseMwmToolbarFragment
     sLocalizedNames.add(name);
   }
 
+  public int getMandatoryNamesCount() {
+    return mMandatoryNamesCount;
+  }
+
+  public void setMandatoryNamesCount(int mandatoryNamesCount) {
+    mMandatoryNamesCount = mandatoryNamesCount;
+  }
+
   @Nullable
   @Override
   public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState)
@@ -112,7 +125,9 @@ public class EditorHostFragment extends BaseMwmToolbarFragment
       mIsNewObject = getArguments().getBoolean(EditorActivity.EXTRA_NEW_OBJECT, false);
     mToolbarController.setTitle(getTitle());
 
-    setLocalizedNames(Editor.nativeGetLocalizedNames());
+    LocalizedNamesWithPriorityPair localizedNamesWithPriority = Editor.nativeGetLocalizedNamesWithPriority();
+    setLocalizedNames(localizedNamesWithPriority.getNames());
+    setMandatoryNamesCount(localizedNamesWithPriority.getMandatoryNamesCount());
     editMapObject();
   }
 

@@ -17,6 +17,7 @@ import com.mapswithme.maps.editor.data.FeatureCategory;
 import com.mapswithme.maps.editor.data.Language;
 import com.mapswithme.maps.editor.data.LocalizedName;
 import com.mapswithme.maps.editor.data.LocalizedStreet;
+import com.mapswithme.maps.editor.data.LocalizedNamesWithPriorityPair;
 
 
 /**
@@ -101,9 +102,7 @@ public final class Editor
   public static native boolean nativeIsNameEditable();
   public static native boolean nativeIsBuilding();
 
-  public static native String nativeGetDefaultName();
-  public static native void nativeSetDefaultName(String name);
-  public static native @NonNull LocalizedName[] nativeGetLocalizedNames();
+  public static native LocalizedNamesWithPriorityPair nativeGetLocalizedNamesWithPriority();
   public static native void nativeSetLocalizedNames(@NonNull LocalizedName[] names);
   public static native LocalizedName nativeMakeLocalizedName(String langCode, String name);
   public static native Language[] nativeGetSupportedLanguages();

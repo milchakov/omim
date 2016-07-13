@@ -1,8 +1,8 @@
+#include "indexer/editable_map_object.hpp"
 #include "indexer/classificator.hpp"
 #include "indexer/cuisines.hpp"
-#include "indexer/editable_map_object.hpp"
-#include "indexer/postcodes_matcher.hpp"
 #include "indexer/osm_editor.hpp"
+#include "indexer/postcodes_matcher.hpp"
 
 #include "base/macros.hpp"
 #include "base/string_utils.hpp"
@@ -10,9 +10,54 @@
 #include "std/cctype.hpp"
 #include "std/cmath.hpp"
 
+
+namespace
+{
+bool PushLanguage(StringUtf8Multilang const & names, int8_t const index, vector<osm::LocalizedName> & result)
+{
+  string langName;
+  
+  if (StringUtf8Multilang::kUnsupportedLanguageCode == index ||
+      StringUtf8Multilang::kDefaultCode == index)
+    return false;
+  
+  // Exclude languages which already in container
+  auto const it = find_if(result.begin(), result.end(), [index](osm::LocalizedName const & localizedName)
+  {
+    return localizedName.m_code == index;
+  });
+  
+  if (result.end() != it)
+    return false;
+  
+  names.GetString(index, langName);
+  result.emplace_back(index, langName);
+  
+  return true;
+}
+
+size_t PushMwmLanguages(StringUtf8Multilang const & names, vector<string> const & mwmLanguages, vector<osm::LocalizedName> & result)
+{
+  size_t count = 0;
+  int8_t index = StringUtf8Multilang::kUnsupportedLanguageCode;
+  static size_t const kMaxCountMwmLanguages = 2;
+  
+  for (auto const & language : mwmLanguages)
+  {
+    index = StringUtf8Multilang::GetLangIndex(language);
+    if(PushLanguage(names, index, result))
+      ++count;
+    
+    if (count >= kMaxCountMwmLanguages)
+      return count;
+  }
+  
+  return count;
+}
+}
+
 namespace osm
 {
-  list <string> const kNativelanguagesForMwm = {"de", "fr"};
 // LocalizedName -----------------------------------------------------------------------------------
 
 LocalizedName::LocalizedName(int8_t const code, string const & name)
@@ -51,14 +96,46 @@ vector<feature::Metadata::EType> const & EditableMapObject::GetEditableFields() 
 
 StringUtf8Multilang const & EditableMapObject::GetName() const { return m_name; }
 
-vector<LocalizedName> EditableMapObject::GetLocalizedNames() const
+pair<vector<LocalizedName>, size_t> EditableMapObject::GetLocalizedNamesWithPriority() const
 {
-  vector<LocalizedName> result;
-  m_name.ForEach([&result](int8_t code, string const & name) -> bool
-                 {
-                   result.push_back({code, name});
-                   return true;
-                 });
+  return GetLocalizedNamesWithPriorityImpl(GetMwmLanguages(), languages::GetCurrentNorm());
+}
+  
+pair<vector<LocalizedName>, size_t> EditableMapObject::GetLocalizedNamesWithPriorityImpl(vector<string> const &nativeMwmLanguages, string const & userLanguage) const
+{
+  pair<vector<LocalizedName>, size_t> result;
+  vector<LocalizedName> & names = result.first;
+  size_t & topCount = result.second;
+  // Push Mwm languages
+  topCount = PushMwmLanguages(m_name, nativeMwmLanguages, names);
+  
+  // Push user's language
+  int8_t index = StringUtf8Multilang::GetLangIndex(userLanguage);
+  if(PushLanguage(m_name, index, names))
+    ++topCount;
+  
+  // Push international language
+  if(PushLanguage(m_name, StringUtf8Multilang::kInternationalCode, names))
+    ++topCount;
+  
+  // Push other languages
+  m_name.ForEach([&names, topCount](int8_t code, string const & name) -> bool {
+    // Exclude default name
+    if (StringUtf8Multilang::kDefaultCode == code)
+      return true;
+    
+    auto const mandatoryNamesEnd = names.begin() + topCount;
+    // Exclude languages which already in container (languages with top priority)
+    auto const it = find_if(
+                            names.begin(), mandatoryNamesEnd,
+                            [code](LocalizedName const & localizedName) { return localizedName.m_code == code; });
+    
+    if (mandatoryNamesEnd == it)
+      names.emplace_back(code, name);
+    
+    return true;
+  });
+  
   return result;
 }
 
@@ -84,45 +161,63 @@ void EditableMapObject::SetName(StringUtf8Multilang const & name) { m_name = nam
 
 void EditableMapObject::SetName(string name, int8_t langCode)
 {
-  ASSERT(StringUtf8Multilang::kDefaultCode != langCode, ("Default name should be calculated"));
-  
   strings::Trim(name);
-  if (!name.empty())
-    m_name.AddString(langCode, name);
-  
-  if(Editor::Instance().WasDefaultNameSaved(GetID()))
+  if (name.empty())
     return;
+
+  ASSERT_NOT_EQUAL((int8_t)StringUtf8Multilang::kDefaultCode, langCode,
+                   ("You trying to set ", name, " as default, but default name should be calculated"));
   
-  auto defaultName = CalculateDefaultName(m_name, kNativelanguagesForMwm);
-  
-  if(!defaultName.empty())
-  {
-    m_name.AddString(StringUtf8Multilang::kDefaultCode, defaultName);
-  }
-  else
+  if (!Editor::Instance().WasDefaultNameSaved(GetID()) &&
+      CanUseAsDefaultName(langCode, GetMwmLanguages(), languages::GetCurrentNorm()))
   {
     m_name.AddString(StringUtf8Multilang::kDefaultCode, name);
   }
+
+  m_name.AddString(langCode, name);
 }
+
+// Use priority: 1. Mwm languages 2. User's language 3. International language
+// TODO:
+bool EditableMapObject::CanUseAsDefaultName(int8_t const langCode,
+                                            vector<string> const & nativeMwmLanguages,
+                                            string const & userLanguage)
+{
+  int8_t index = StringUtf8Multilang::kUnsupportedLanguageCode;
+  string unused;
   
-  string EditableMapObject::CalculateDefaultName(StringUtf8Multilang const & name, list <string> const & nativeMwmLanguages)
+  for (auto const & language : nativeMwmLanguages)
   {
-    string defaultName;
-    
-    for(auto const &language : nativeMwmLanguages)
-    {
-      if(name.GetString(language, defaultName))
-        return defaultName;
-    }
-    
-    if(name.GetString(StringUtf8Multilang::kInternationalCode, defaultName))
-      return defaultName;
-    
-    
-    
-    
-    return defaultName;
+    index = StringUtf8Multilang::GetLangIndex(language);
+
+    if (StringUtf8Multilang::kUnsupportedLanguageCode == index)
+      return false;
+
+    if (langCode == index)
+      return true;
+
+    // return false in case when name with high priority was already entered
+    if (m_name.GetString(index, unused))
+      return false;
   }
+
+  index = StringUtf8Multilang::GetLangIndex(userLanguage);
+
+  if (StringUtf8Multilang::kUnsupportedLanguageCode == index)
+    return false;
+
+  if (langCode == index)
+    return true;
+
+  // return false in case when name with high priority was already entered
+  if (m_name.GetString(index, unused))
+    return false;
+
+  if (langCode == StringUtf8Multilang::kInternationalCode)
+    return true;
+
+  return false;
+}
 
 void EditableMapObject::SetMercator(m2::PointD const & center) { m_mercator = center; }
 

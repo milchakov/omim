@@ -84,18 +84,6 @@ NSString * reuseIdentifier(MWMPlacePageCellType cellType)
   return haveCell ? @(it->second.c_str()) : @"";
 }
 
-vector<osm::LocalizedName> getAdditionalLocalizedNames(osm::EditableMapObject const & emo)
-{
-  vector<osm::LocalizedName> result;
-  emo.GetName().ForEach([&result](int8_t code, string const & name) -> bool
-  {
-    if (code != StringUtf8Multilang::kDefaultCode)
-      result.push_back({code, name});
-    return true;
-  });
-  return result;
-}
-
 void cleanupAdditionalLanguages(vector<osm::LocalizedName> const & names, vector<NSInteger> & newAdditionalLanguages)
 {
   newAdditionalLanguages.erase(remove_if(newAdditionalLanguages.begin(),
@@ -421,7 +409,9 @@ void registerCellsForTableView(vector<MWMPlacePageCellType> const & cells, UITab
     m_cells[MWMEditorSectionName] = kSectionNameCellTypes;
     registerCellsForTableView(kSectionNameCellTypes, self.tableView);
 
-    vector<osm::LocalizedName> localizedNames = getAdditionalLocalizedNames(m_mapObject);
+    auto const localizedNamesWithPriority = m_mapObject.GetLocalizedNamesWithPriority();
+    auto const & localizedNames = localizedNamesWithPriority.first;
+    
     cleanupAdditionalLanguages(localizedNames, m_newAdditionalLanguages);
     auto const cells = cellsForAdditionalNames(localizedNames, m_newAdditionalLanguages, self.showAdditionalNames);
     m_sections.push_back(MWMEditorSectionAdditionalNames);
@@ -564,8 +554,9 @@ void registerCellsForTableView(vector<MWMPlacePageCellType> const & cells, UITab
     {
       MWMEditorAdditionalNameTableViewCell * tCell = static_cast<MWMEditorAdditionalNameTableViewCell *>(cell);
 
-      vector<osm::LocalizedName> const localizedNames = getAdditionalLocalizedNames(m_mapObject);
-
+      auto const localizedNamesWithPriority = m_mapObject.GetLocalizedNamesWithPriority();
+      auto const & localizedNames = localizedNamesWithPriority.first;
+      
       if (indexPath.row < localizedNames.size())
       {
         osm::LocalizedName const & name = localizedNames[indexPath.row];

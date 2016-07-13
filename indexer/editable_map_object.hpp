@@ -67,7 +67,13 @@ public:
   vector<feature::Metadata::EType> const & GetEditableFields() const;
 
   StringUtf8Multilang const & GetName() const;
-  vector<LocalizedName> GetLocalizedNames() const;
+  // Returns vector of localized names with following priority
+  //  1.Names for Mwm languages
+  //  2.User`s language name
+  //  3.International name
+  //  4.Other names
+  // and topCount - count of names with top priority, which should be always shown.
+  pair<vector<LocalizedName>, size_t> GetLocalizedNamesWithPriority() const;
   LocalizedStreet const & GetStreet() const;
   vector<LocalizedStreet> const & GetNearbyStreets() const;
   string const & GetHouseNumber() const;
@@ -117,8 +123,27 @@ public:
   static bool ValidateWebsite(string const & site);
   static bool ValidateEmail(string const & email);
 
+  // dummy, should be removed
+  static vector<string> const & GetMwmLanguages()
+  {
+    static vector<string> const kNativelanguagesForMwm = {"de", "fr"};
+
+    return kNativelanguagesForMwm;
+  }
+  
+  static size_t GetMwmLanguagesCount()
+  {
+    return 2;
+  }
+  // dummy, should be removed
+  
 private:
-  string CalculateDefaultName(StringUtf8Multilang const & name, list <string> const & nativeMwmLanguages);
+  bool CanUseAsDefaultName(int8_t const langCode, vector<string> const & nativeMwmLanguages,
+                           string const & userLanguage);
+  
+  pair<vector<LocalizedName>, size_t> GetLocalizedNamesWithPriorityImpl(vector<string> const & nativeMwmLanguages,
+                                         string const & userLanguage) const;
+
   
   string m_houseNumber;
   LocalizedStreet m_street;
