@@ -88,7 +88,7 @@ public class PlacePageView extends RelativeLayout
     implements View.OnClickListener,
                View.OnLongClickListener,
                Sponsored.OnPriceReceivedListener,
-               Sponsored.OnInfoReceivedListener,
+               Sponsored.OnHotelInfoReceivedListener,
                LineCountTextView.OnLineCountCalculatedListener,
                RecyclerClickListener,
                NearbyAdapter.OnItemClickListener
@@ -534,7 +534,7 @@ public class PlacePageView extends RelativeLayout
   }
 
   @Override
-  public void onInfoReceived(@NonNull String id, @NonNull Sponsored.HotelInfo info)
+  public void onHotelInfoReceived(@NonNull String id, @NonNull Sponsored.HotelInfo info)
   {
     if (mSponsored == null || !TextUtils.equals(id, mSponsored.getId()))
       return;
@@ -652,7 +652,7 @@ public class PlacePageView extends RelativeLayout
             if (info == null)
               return;
 
-            String event = Statistics.EventName.PP_SPONSORED_NONE;
+            String event = null;
             Map<String, String> params = new HashMap<>();
             switch (info.getType())
             {
@@ -669,7 +669,7 @@ public class PlacePageView extends RelativeLayout
               case Sponsored.TYPE_GEOCHAT:
                 break;
               case Sponsored.TYPE_OPENTABLE:
-                params.put("provider", "Opentable.Com");
+                params.put("provider", "OpenTable");
                 params.put("restaurant_lat",
                     (mMapObject == null ? "N/A" : String.valueOf(mMapObject.getLat())));
                 params.put("restaurant_lon",
@@ -682,7 +682,8 @@ public class PlacePageView extends RelativeLayout
             }
 
             final Location location = LocationHelper.INSTANCE.getLastKnownLocation();
-            Statistics.INSTANCE.trackEvent(event, location, params);
+            if (!TextUtils.isEmpty(event))
+              Statistics.INSTANCE.trackEvent(event, location, params);
 
             try
             {
@@ -1021,7 +1022,6 @@ public class PlacePageView extends RelativeLayout
     {
       switch (mSponsored.getType())
       {
-
         case Sponsored.TYPE_BOOKING:
           buttons.add(PlacePageButtons.Item.BOOKING);
           break;
