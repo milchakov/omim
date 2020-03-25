@@ -17,7 +17,9 @@ import java.util.Objects;
 
 public class ElevationProfileViewRenderer implements PlacePageViewRenderer<PlacePageData>
 {
+  // Must be correspond to map/elevation_info.hpp constants.
   private static final int MAX_DIFFICULTY_LEVEL = 3;
+  private static final int INVALID_DIFFICULTY_LEVEL = 4;
 
   @SuppressWarnings("NullableProblems")
   @NonNull
@@ -91,6 +93,9 @@ public class ElevationProfileViewRenderer implements PlacePageViewRenderer<Place
   {
     for (View levelView : mDifficultyLevels)
       levelView.setEnabled(false);
+
+    if (level == INVALID_DIFFICULTY_LEVEL)
+      return;
 
     for (int i = 0; i < level; i++)
       mDifficultyLevels[i].setEnabled(true);
