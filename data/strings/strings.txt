@@ -48750,3 +48750,7 @@
   [citymobil_taxi_title]
     en = Citymobil
     ru = Ситимобил
+
+  [taxi_category_order]
+    en = Order
+    ru = Заказать
